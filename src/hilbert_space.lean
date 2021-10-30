@@ -1,5 +1,6 @@
 import analysis.inner_product_space.basic
 import analysis.inner_product_space.projection
+import analysis.inner_product_space.dual
 import analysis.normed_space.dual
 import data.real.nnreal
 import order.filter.ultrafilter
@@ -12,50 +13,128 @@ open_locale classical
 
 def nhdsf {α} [topological_space α]  (a : α) : filter α := (⨅ s ∈ {s : set α | a ∈ s ∧ is_open s}, filter.principal s)
 
-namespace inner_product_space
-open is_R_or_C continuous_linear_map
-variables  {𝕜 : Type u} [is_R_or_C 𝕜] {E : Type v} [inner_product_space 𝕜 E]
+namespace linear_map
+open_locale classical nnreal topological_space
+open metric continuous_linear_map
 
-@[reducible] def operator (𝕜 : Type u) [is_R_or_C 𝕜] (E : Type v) [inner_product_space 𝕜 E] := E →ₗ[𝕜] E
+
+variables {𝕜 : Type*} {E : Type*} {F : Type*} {G : Type*}
+          [semi_normed_group E] [semi_normed_group F] [semi_normed_group G]
+
+local notation `⋆` := (↑(star_ring_aut : ring_aut 𝕜) : 𝕜 →+* 𝕜)
+
+variables [normed_field 𝕜] [semi_normed_space 𝕜 E] [semi_normed_space 𝕜 F] [star_ring 𝕜] (f : E →ₛₗ[⋆] F)
+
+lemma lipschitz_of_bound_star (C : ℝ) (h : ∀x, ∥f x∥ ≤ C * ∥x∥) :
+  lipschitz_with (real.to_nnreal C) f :=
+f.to_add_monoid_hom.lipschitz_of_bound C h
+
+lemma continuous_of_bound_star (C : ℝ) (h : ∀x, ∥f x∥ ≤ C * ∥x∥) :
+  continuous f :=
+(f.lipschitz_of_bound_star C h).continuous
+
+end linear_map
+
+namespace continuous_linear_map
+
+
+
+end continuous_linear_map
+
+namespace inner_product_space
+
+open is_R_or_C continuous_linear_map
+
+variables {𝕜 : Type u} [is_R_or_C 𝕜] {E : Type v} [inner_product_space 𝕜 E]
+
+local notation `⋆` := (star_ring_aut : ring_aut 𝕜)
+
 local notation `⟪`x`, `y`⟫` := @inner 𝕜 E _ x y
 
-def adjoint (A B : operator 𝕜 E) : Prop := ∀ φ ψ : E, ⟪A φ, ψ⟫ = ⟪φ, B ψ⟫
-local infix ` † `:15 := adjoint
+notation `〈` x `|`:= inner_right x
 
-def hermitian (A : operator 𝕜 E) : Prop := A † A
+@[reducible] def operator (𝕜 : Type u) [is_R_or_C 𝕜] (E : Type v) [inner_product_space 𝕜 E] := E →L[𝕜] E
 
-lemma adjoint.add {A A' B B' : operator 𝕜 E} (h : A † B) (h' : A' † B') : A + A' † B + B' := λ φ ψ,
-calc ⟪A φ + A' φ, ψ⟫ = ⟪A φ, ψ⟫ + ⟪A' φ, ψ⟫ : by simp only [inner_add_left]
-                 ... = ⟪φ, B ψ⟫ + ⟪φ, B' ψ⟫ : by rw [h, h']
-                 ... = ⟪φ, B ψ + B' ψ⟫      : by simp only [inner_add_right]
+variables [complete_space E]
 
-lemma adjoint.mul {A A' B B' : operator 𝕜 E} (h : A † B) (h' : A' † B') : A * A' † B' * B := λ φ ψ,
-calc ⟪A (A' φ), ψ⟫ = ⟪A' φ, B ψ⟫   : by rw h
-               ... = ⟪φ, B' (B ψ)⟫ : by rw h'
+lemma inn_right_norm (x : E) : ∥@inner_right 𝕜 E _ _ x∥ ≤ ∥x∥ :=
+continuous_linear_map.op_norm_le_bound _ (norm_nonneg x) (λ x, by simp[norm_inner_le_norm])
 
-lemma adjoint.symm {A B : operator 𝕜 E} (h : B † A) : A † B := λ φ ψ,
-calc ⟪A φ, ψ⟫ = conj ⟪ψ, A φ⟫ : by simp
-          ... = conj ⟪B ψ, φ⟫ : by rw h
-          ... = ⟪φ, B ψ⟫      : by simp
+def adjoint (A : operator 𝕜 E) : operator 𝕜 E :=
+let to_dual' : E →ₛₗ[(⋆ : 𝕜 →+* 𝕜)] normed_space.dual 𝕜 E := 
+     { to_fun := λ x, ((〈x|).comp A),
+       map_add' := λ x y, by { ext z, simp only [continuous_linear_map.comp_apply, inner_right_apply, inner_add_left], refl }, 
+       map_smul' := λ c x, by { 
+         ext y, simp only [continuous_linear_map.comp_apply, inner_right_apply, inner_smul_left,continuous_linear_map.smul_apply,
+           continuous_linear_map.comp_apply, inner_right_apply], refl } },
+    A' := (to_dual 𝕜 E).symm.to_linear_equiv.to_linear_map.comp to_dual' in
+begin
+    have : continuous A', 
+      from linear_map.continuous_of_bound A' (∥A∥) (λ x, by { simp [A'],
+        calc
+          ∥(〈x|).comp A∥ ≤ ∥inner_right x∥ * ∥A∥ : continuous_linear_map.op_norm_comp_le _ _
+                     ... ≤ ∥x∥ * ∥A∥             : ordered_ring.mul_le_mul_of_nonneg_right (inn_right_norm x) (norm_nonneg _)
+                     ... = ∥A∥ * ∥x∥             : mul_comm ∥x∥ ∥A∥ }),
+    exact { to_linear_map := A', cont := this }
+end
 
-lemma adjoint.scalar_left {A B : operator 𝕜 E} (h : A † B) (c : 𝕜) : c • A † (conj c) • B := λ φ ψ,
-calc ⟪c • A φ, ψ⟫ = conj c * ⟪A φ, ψ⟫   : by simp only [inner_smul_left]
-              ... = conj c * ⟪φ, B ψ⟫   : by rw h
-              ... = ⟪φ, conj c • (B ψ)⟫ : by simp only [inner_smul_right]
+postfix `†`:90 := adjoint
 
-lemma adjoint.scalar_real {E : Type v} [inner_product_space ℂ E]
-  {A B : operator ℂ E} (h : A † B) (r : ℝ) : r • A † r • B :=
-by { have := h.scalar_left r, simp at this, exact this }
+def is_hermitian (A : operator 𝕜 E) : Prop := A† = A
 
-lemma hermitial.add {A B : operator 𝕜 E} (hA : hermitian A) (hB : hermitian B) :
-  hermitian (A + B) := adjoint.add hA hB
+variables (𝕜)
 
-lemma hermitial.scalar_real {E : Type v} [inner_product_space ℂ E]
-  {A : operator ℂ E} (h : hermitian A) (r : ℝ) :
-  hermitian (r • A) := adjoint.scalar_real h r
+theorem to_dual_symm_apply (d : E →L[𝕜] 𝕜) (x : E) : ⟪(to_dual 𝕜 E).symm d, x⟫ = d x :=
+by { have : (to_dual 𝕜 E) ((to_dual 𝕜 E).symm d) x = d x,
+       from congr_fun (congr_arg coe_fn ((to_dual 𝕜 E).to_linear_equiv.right_inv d)) x,
+     simp only [to_dual_apply] at this, exact this }
 
-def bra (φ : E) : E →ₗ[𝕜] 𝕜 :=
-{to_fun := inner φ, map_add' := λ x y, inner_add_right, map_smul' := λ x y, inner_smul_right}
+variables {𝕜}
+
+lemma adjoint_left (A : operator 𝕜 E) (x y : E) : ⟪A† x, y⟫ = ⟪x, A y⟫ := by simp [adjoint, to_dual_symm_apply]
+
+lemma adjoint_right (A : operator 𝕜 E) (x y : E) : ⟪x, A† y⟫ = ⟪A x, y⟫ := by { 
+  have : ⋆ ⟪A† y, x⟫ = ⋆ ⟪y, A x⟫, from congr_arg ⋆ (adjoint_left A y x),
+  simp only [inner_conj_sym] at this, exact this }
+
+lemma operator_ext_left (A B : operator 𝕜 E) (h : ∀ x y, ⟪A x, y⟫ = ⟪B x, y⟫) : A = B :=
+begin
+  ext x,
+  have eqn : 〈A x| = 〈B x|, { ext y, simp, exact h x y },
+  have : (to_dual 𝕜 E).to_linear_equiv.inv_fun 〈A x| = A x, from (to_dual 𝕜 E).to_linear_equiv.left_inv (A x),
+  rw [←this, eqn], exact (to_dual 𝕜 E).to_linear_equiv.left_inv (B x)
+end
+
+lemma operator_ext_right (A B : operator 𝕜 E) (h : ∀ x y, ⟪x, A y⟫ = ⟪x, B y⟫) : A = B :=
+operator_ext_left A B (λ x y, by {
+  have : ⋆ ⟪y, A x⟫ = ⋆ ⟪y, B x⟫, from congr_arg ⋆ (h y x), simp only [inner_conj_sym] at this,
+  exact this })
+
+lemma adjoint_add (A B : operator 𝕜 E) : (A + B)† = A† + B† := operator_ext_left ((A + B)†) (A† + B†)
+begin
+  intros x y, simp only [adjoint_left],
+  calc ⟪x, A y + B y⟫ = ⟪x, A y⟫ + ⟪x, B y⟫   : by simp only [inner_add_right]
+                  ... = ⟪A† x, y⟫ + ⟪B† x, y⟫ : by simp only [adjoint_left]
+                  ... = ⟪A† x + B† x, y⟫      : by simp only [inner_add_left]
+end
+
+lemma adjoint_mul (A B : operator 𝕜 E) : (A * B)† = B† * A† := operator_ext_left ((A * B)†) (B† * A†)
+begin
+  intros x y, simp only [adjoint_left],
+  calc ⟪x, A (B y)⟫ = ⟪A† x, B y⟫    : by simp only [adjoint_left]
+                ... = ⟪B† (A† x), y⟫ : by simp only [adjoint_left]
+end
+
+lemma adjoint_smul (A : operator 𝕜 E) (k : 𝕜) : (k • A)† = ⋆k • A† := operator_ext_left ((k • A)†) (⋆k • A†)
+begin
+  intros x y, simp only [adjoint_left],
+  calc ⟪x, k • A y⟫ = k * ⟪x, A y⟫   : by simp only [inner_smul_right]
+                ... = k * ⟪A† x, y⟫  : by simp only [adjoint_left]
+                ... = ⟪⋆k • A† x, y⟫ : by simp [inner_smul_left]
+end
+
+lemma adjoint_adjoint (A : operator 𝕜 E) : A†† = A := operator_ext_left (A††) A
+(λ x y, by simp only [adjoint_left, adjoint_right])
 
 section
 variables {ι : Type*} (𝕜)
@@ -80,33 +159,6 @@ end
 
 end 
 
-variable [i : inner_product_space 𝕜 E]
-include i
-
-def distance (φ : E) (D : set E) : ℝ := Inf {r | ∃ ψ ∈ D, r = ∥φ - ψ∥}
-
-
-
 end inner_product_space
-
-class hilbert_space (𝕜 : Type*) [is_R_or_C 𝕜] (E : Type*) :=
-(inner : inner_product_space 𝕜 E)
-(complete : complete_space E)
-
-namespace hilbert_space
-open is_R_or_C
-open_locale big_operators classical topological_space
-
-variables {𝕜 : Type u} [is_R_or_C 𝕜] {E : Type v} [hilbert_space 𝕜 E]
-
-noncomputable instance : inner_product_space 𝕜 E := hilbert_space.inner
-
-local notation `⟪`x`, `y`⟫` := @inner 𝕜 E _ x y
-
-structure complete_orthonormal (ι : Type*) (𝕜 : Type u) [is_R_or_C 𝕜] (E : Type v) [hilbert_space 𝕜 E] :=
-(repr : ι → E)
-(orthonormal : orthonormal 𝕜 repr)
-
-end hilbert_space
 
 

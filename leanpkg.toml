@@ -1,8 +1,8 @@
 [package]
 name = "quantum_mechanics"
 version = "0.1"
-lean_version = "leanprover-community/lean:3.33.0"
+lean_version = "leanprover-community/lean:3.34.0"
 path = "src"
 
 [dependencies]
-mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "5b527bd03471cb19ffe836506f20ac3ed3025156"}
+mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "415da222f1caafb5816f0afd124afd84ff50e214"}
