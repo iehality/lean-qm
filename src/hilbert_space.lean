@@ -187,50 +187,68 @@ def is_hermitian_iff {A : operator 𝕜 E} : is_hermitian A ↔ A† = A :=
 ⟨λ h, operator_ext_left (A†) A (λ x y, by simp only [adjoint_left, h x y]), λ h x y, by simp only [←adjoint_left, h]⟩
 
 structure hermitian (𝕜 : Type u) [is_R_or_C 𝕜] (E : Type v) [inner_product_space 𝕜 E] [complete_space E] :=
-(operator : operator 𝕜 E)
-(self : is_hermitian operator)
+(map : operator 𝕜 E)
+(comm : is_hermitian map)
+
+namespace hermitian
 
 def square_is_hermitian (A : operator 𝕜 E) (h : is_hermitian A) : is_hermitian (A * A) :=
 is_hermitian_iff.mpr (by simp only [is_hermitian, adjoint_mul, is_hermitian_iff.mp h])
 
-instance : has_coe (hermitian 𝕜 E) (operator 𝕜 E) := ⟨hermitian.operator⟩
+instance : has_coe (hermitian 𝕜 E) (operator 𝕜 E) := ⟨hermitian.map⟩
+
+@[ext] lemma ext : ∀ {A B : hermitian 𝕜 E} (h : ∀ x, A x = B x), A = B
+| ⟨A, hA⟩ ⟨B, hB⟩ h := by { have : A = B, { ext x, exact h x }, rcases this with rfl, refl }
 
 instance : has_zero (hermitian 𝕜 E) := ⟨⟨0, is_hermitian_iff.mpr adjoint_zero⟩⟩
 
 instance : has_one (hermitian 𝕜 E) := ⟨⟨1, is_hermitian_iff.mpr adjoint_one⟩⟩
 
-@[simp] lemma hermitian_adjoint (H : hermitian 𝕜 E) : (↑H : operator 𝕜 E)† = ↑H := is_hermitian_iff.mp H.self
+@[simp] lemma adjoint_eq (H : hermitian 𝕜 E) : (↑H : operator 𝕜 E)† = ↑H := is_hermitian_iff.mp H.comm
 
-instance : has_add (hermitian 𝕜 E) := ⟨λ A B, ⟨A + B, is_hermitian_iff.mpr (by simp only [adjoint_add, hermitian_adjoint])⟩⟩
+instance : has_add (hermitian 𝕜 E) := ⟨λ A B, ⟨A + B, is_hermitian_iff.mpr (by simp only [adjoint_add, adjoint_eq])⟩⟩
 
-instance : has_sub (hermitian 𝕜 E) := ⟨λ A B, ⟨A - B, is_hermitian_iff.mpr (by simp only [adjoint_sub, hermitian_adjoint])⟩⟩
+instance : has_sub (hermitian 𝕜 E) := ⟨λ A B, ⟨A - B, is_hermitian_iff.mpr (by simp only [adjoint_sub, adjoint_eq])⟩⟩
 
-instance : has_pow (hermitian 𝕜 E) ℕ := ⟨λ A n, ⟨power (↑A) n, is_hermitian_iff.mpr (by simp only [adjoint_power, hermitian_adjoint])⟩⟩
+instance : has_pow (hermitian 𝕜 E) ℕ := ⟨λ A n, ⟨power (↑A) n, is_hermitian_iff.mpr (by simp only [adjoint_power, adjoint_eq])⟩⟩
 
 instance : has_scalar ℝ (hermitian 𝕜 E) :=
-⟨λ r A, ⟨(↑r : 𝕜) • A, is_hermitian_iff.mpr (by simp only [adjoint_smul, conj_of_real, hermitian_adjoint])⟩⟩
+⟨λ r A, ⟨(↑r : 𝕜) • A, is_hermitian_iff.mpr (by simp only [adjoint_smul, conj_of_real, adjoint_eq])⟩⟩
 
-lemma hermitian_inner (A : hermitian 𝕜 E) (x y : E) : ⟪x, A y⟫ = ⟪A x, y⟫ := A.self x y
+lemma inner_comm (A : hermitian 𝕜 E) (x y : E) : ⟪x, A y⟫ = ⟪A x, y⟫ := A.comm x y
 
-lemma hermitian_inner_real (A : hermitian 𝕜 E) (x : E) : ↑(re ⟪x, A x⟫) = ⟪x, A x⟫ := eq_conj_iff_re.mp
-(by simp only [inner_conj_sym, hermitian_inner])
+lemma inner_real (A : hermitian 𝕜 E) (x : E) : ↑(re ⟪x, A x⟫) = ⟪x, A x⟫ := eq_conj_iff_re.mp
+(by simp only [inner_conj_sym, inner_comm])
 
-lemma hermitian_pow_def (A : hermitian 𝕜 E) (n : ℕ) : (↑(A^n) : operator 𝕜 E) = power A n := rfl
+lemma pow_def (A : hermitian 𝕜 E) (n : ℕ) : (↑(A^n) : operator 𝕜 E) = power A n := rfl
 
-lemma hermitian_pow_two (A : hermitian 𝕜 E) : (↑(A^2) : operator 𝕜 E) = A * A := by simp only [hermitian_pow_def, power_two]
+lemma pow_two (A : hermitian 𝕜 E) : (↑(A^2) : operator 𝕜 E) = A * A := by simp only [pow_def, power_two]
 
-lemma hermitian_apply (A : hermitian 𝕜 E) (x : E) : (↑A : operator 𝕜 E) x = A x := rfl
+lemma apply (A : hermitian 𝕜 E) (x : E) : (↑A : operator 𝕜 E) x = A x := rfl
 
-lemma hermitian_apply_two (A : hermitian 𝕜 E) (x : E) : (A^2) x = (A * A : operator 𝕜 E) x := rfl
+lemma zero_apply (x : E) : (0 : hermitian 𝕜 E) x = 0 := rfl
 
-lemma hermitian_one_coe : (↑(1 : hermitian 𝕜 E) : operator 𝕜 E) = 1 := rfl
+lemma one_apply (x : E) : (1 : hermitian 𝕜 E) x = x := rfl
 
-lemma hermitian_sub_coe (A B : hermitian 𝕜 E) : (↑(A - B) : operator 𝕜 E) = ↑A - ↑B := rfl
+lemma apply_pow_two (A : hermitian 𝕜 E) (x : E) : (A^2) x = (A * A : operator 𝕜 E) x := rfl
 
-lemma hermitian_smul_coe (A : hermitian 𝕜 E) (r : ℝ) : (↑(r • A) : operator 𝕜 E) = (↑r : 𝕜) • ↑A := rfl
+lemma smul_apply (A : hermitian 𝕜 E) (r : ℝ) (x : E) : (r • A) x = (r : 𝕜) • A x := rfl
 
-@[simp] lemma hermitian_app_zero (A : hermitian 𝕜 E) : A 0 = 0 :=
-by simp[←hermitian_apply]
+lemma sub_apply (A B : hermitian 𝕜 E) (x : E) : (A - B) x = A x - B x := rfl
+
+lemma one_coe : (↑(1 : hermitian 𝕜 E) : operator 𝕜 E) = 1 := rfl
+
+lemma sub_coe (A B : hermitian 𝕜 E) : (↑(A - B) : operator 𝕜 E) = ↑A - ↑B := rfl
+
+lemma smul_coe (A : hermitian 𝕜 E) (r : ℝ) : (↑(r • A) : operator 𝕜 E) = (↑r : 𝕜) • ↑A := rfl
+
+@[simp] lemma map_zero (A : hermitian 𝕜 E) : A 0 = 0 := by simp[←apply]
+
+lemma map_sub (A : hermitian 𝕜 E) (x y : E) : A (x - y) = A x - A y := by simp[←apply]
+
+lemma map_smul (A : hermitian 𝕜 E) (x : E) (k : 𝕜) : A (k • x) = k • A x := by simp[←apply]
+
+end hermitian
 
 section
 variables {ι : Type*} (𝕜)
@@ -283,9 +301,9 @@ notation `𝛥` := fluctuation
 section 
 variables (A : hermitian 𝕜 E) (k : 𝕜) (ψ : E)
 
-lemma expectation_eq : ↑(expectation A ψ) = ⟪ψ, A ψ⟫ := hermitian_inner_real A ψ
+lemma expectation_eq : ↑(expectation A ψ) = ⟪ψ, A ψ⟫ := hermitian.inner_real A ψ
 
-lemma fluctuation_eq : ↑(𝛥 A ψ) = let Δ := A - expectation A ψ • 1 in ⟪ψ, (Δ^2) ψ⟫ := hermitian_inner_real _ _
+lemma fluctuation_eq : ↑(𝛥 A ψ) = let Δ := A - expectation A ψ • 1 in ⟪ψ, (Δ^2) ψ⟫ := hermitian.inner_real _ _
 
 lemma density_eq_re_inner : density A k ψ = re ⟪ψ, Projection ↑A k ψ⟫ :=
 have ⟪ψ - Projection ↑A k ψ, Projection ↑A k ψ⟫ = 0, from orthogonal_projection_fn_inner_eq_zero ψ _ (orthogonal_projection_fn_mem ψ), 
@@ -306,12 +324,12 @@ have inner1 : ⟪ψ, ψ⟫ = 1,
 calc ↑(𝛥 A ψ) = ⟪ψ, ((A - expectation A ψ • 1)^2) ψ⟫
   : by rw fluctuation_eq
            ... = ⟪ψ, ((A - ⟪ψ, A ψ⟫ • 1 : operator 𝕜 E) * (A - ⟪ψ, A ψ⟫ • 1)) ψ⟫
-  : by simp only [expectation_eq A ψ, ←hermitian_apply, hermitian_pow_two, hermitian_sub_coe, hermitian_smul_coe, hermitian_one_coe]
+  : by simp only [expectation_eq A ψ, ←hermitian.apply, hermitian.pow_two, hermitian.sub_coe, hermitian.smul_coe, hermitian.one_coe]
            ... = ⟪ψ, ((A : operator 𝕜 E) * A - ⟪ψ, A ψ⟫ • A - ⟪ψ, A ψ⟫ • A + ⟪ψ, A ψ⟫^2 • 1) ψ⟫
   : by simp only [sub_mul, mul_sub, eq_pow2, sub_add, eq_smul, eq_smul']
            ... = ⟪ψ, (A^2) ψ⟫ - ⟪ψ, A ψ⟫ * ⟪ψ, A ψ⟫ - ⟪ψ, A ψ⟫ * ⟪ψ, A ψ⟫ + ⟪ψ, A ψ⟫^2
   : by simp only [add_apply, sub_apply, inner_add_right, inner_sub_right, inner_smul_right, smul_apply, one_apply,
-                  inner1, mul_one, hermitian_apply, ←hermitian_pow_two]
+                  inner1, mul_one, hermitian.apply, ←hermitian.pow_two]
            ... = ⟪ψ, (A^2) ψ⟫ - ⟪ψ, A ψ⟫^2
   : by simp only [pow_two, sub_add_cancel]
 
@@ -319,8 +337,8 @@ def diff (A : hermitian 𝕜 E) (ψ : E) : hermitian 𝕜 E := A - expectation A
 
 lemma fluctuation_eq_norm_sq : 𝛥 A ψ = ∥diff A ψ ψ∥^2 :=
 let Δ : hermitian 𝕜 E := A - expectation A ψ • 1 in
-calc 𝛥 A ψ = re ⟪ψ, Δ (Δ ψ)⟫ : by simp only [Δ, fluctuation, hermitian_apply_two, mul_apply, hermitian_apply]
-       ... = re ⟪Δ ψ, Δ ψ⟫   : by rw hermitian_inner
+calc 𝛥 A ψ = re ⟪ψ, Δ (Δ ψ)⟫ : by simp only [Δ, fluctuation, hermitian.apply_pow_two, mul_apply, hermitian.apply]
+       ... = re ⟪Δ ψ, Δ ψ⟫   : by rw hermitian.inner_comm
        ... = ∥Δ ψ∥^2         : by rw norm_sq_eq_inner
 
 end
@@ -336,20 +354,40 @@ notation `-𝑖[` A `, ` B `]` := communitator_hermitian A B
 
 lemma communitator_hermitian_eq (A B : hermitian 𝕜 E) : (-𝑖[A, B] : operator 𝕜 E) = -𝑖 • (A * B - B * A) := rfl
 
-lemma communitator_hermitian_apply (A B : hermitian 𝕜 E) (x : E) :
+lemma communitator_hermitian.apply (A B : hermitian 𝕜 E) (x : E) :
   -𝑖[A, B] x = 𝑖 • (B * A : operator 𝕜 E) x - 𝑖 • (A * B : operator 𝕜 E) x  :=
-by { simp only [←hermitian_apply, communitator_hermitian_eq, smul_apply, sub_apply, smul_sub],
+by { simp only [←hermitian.apply, communitator_hermitian_eq, smul_apply, sub_apply, smul_sub],
      simp only [neg_smul, sub_neg_eq_add, neg_add_eq_sub] }
 
-lemma communitator_hermitian_apply' (A B : hermitian 𝕜 E) (x : E) :
+lemma communitator_hermitian.apply' (A B : hermitian 𝕜 E) (x : E) :
   -𝑖[A, B] x = -𝑖 • (communitator ↑A ↑B : operator 𝕜 E) x := rfl
 
+lemma communitator_hemitian_eq_diff (A B : hermitian 𝕜 E) (x : E) : -𝑖[diff A x, diff B x] = -𝑖[A, B] :=
+have eqn : ∀ (a a' b c d : E), a - b - (c - d) - (a' - c - (b - d)) = a - a',
+{ intros a a' b c d, simp [sub_sub, add_comm (b + (c - d)), add_sub c b, ←sub_add_eq_add_sub, add_comm b]  },
+hermitian.ext (λ y, 
+  calc -𝑖[diff A x, diff B x] y = 𝑖 • (B - expectation B x • 1) ((A - expectation A x • 1) y) - 
+                                  𝑖 • (A - expectation A x • 1) ((B - expectation B x • 1) y)
+  : by {simp only [communitator_hermitian.apply, diff, mul_apply, hermitian.apply], }
+                            ... = 𝑖 • B (A y) - 𝑖 • (expectation A x : 𝕜) • B y
+                                  - (𝑖 • (expectation B x : 𝕜) • A y - 𝑖 • (expectation B x : 𝕜) • (expectation A x : 𝕜) • y)
+                                - (𝑖 • A (B y) - 𝑖 • (expectation B x : 𝕜) • A y
+                                  - (𝑖 • (expectation A x : 𝕜) • B y - 𝑖 • (expectation A x : 𝕜) • (expectation B x : 𝕜) • y))
+  : by simp only [hermitian.sub_apply, hermitian.smul_apply, hermitian.one_apply];
+       simp only [hermitian.map_sub, smul_sub, hermitian.map_smul]
+                            ... = 𝑖 • B (A y) - 𝑖 • A (B y)
+  : by { have : (expectation A x : 𝕜) • (expectation B x : 𝕜) • y = (expectation B x : 𝕜) • (expectation A x : 𝕜) • y,
+         { simp only [smul_smul, mul_comm] }, 
+         rw this, exact eqn _ _ _ _ _ }
+                            ... = -𝑖[A, B] y
+  : by simp only [communitator_hermitian.apply, mul_apply, hermitian.apply] )
 
 theorem real.sq_le_sq_of_pos {x y : ℝ} (hx : 0 ≤ x) (h : x ≤ y) : x^2 ≤ y^2 :=
 (real.sq_le (sq_nonneg y)).mpr (by { simp [real.sqrt_sq (hx.trans h), h], exact norm_num.le_neg_pos y x (hx.trans h) hx})
 
-lemma fluctuation_lower_bound_nonzero (inonzero : 𝑖 ≠ 0) (A B : hermitian 𝕜 E) (ψ : E) (nonzeroA : ∥diff A ψ ψ∥ ≠ 0) (nonzeroB : ∥diff B ψ ψ∥ ≠ 0) :
-  (re ⟪ψ, -𝑖[diff A ψ, diff B ψ] ψ⟫)^2 / 4 ≤ 𝛥 A ψ * 𝛥 B ψ :=
+lemma fluctuation_lower_bound_nonzero
+  (inonzero : 𝑖 ≠ 0) (A B : hermitian 𝕜 E) (ψ : E) (nonzeroA : ∥diff A ψ ψ∥ ≠ 0) (nonzeroB : ∥diff B ψ ψ∥ ≠ 0) :
+  (re ⟪ψ, -𝑖[A, B] ψ⟫)^2 / 4 ≤ 𝛥 A ψ * 𝛥 B ψ :=
 let ΔA : hermitian 𝕜 E := diff A ψ,
     ΔB : hermitian 𝕜 E := diff B ψ,
     r : ℝ := if 0 ≤ re ⟪ψ, -𝑖[ΔA, ΔB] ψ⟫ then ∥ΔA ψ∥ * ∥ΔB ψ∥⁻¹ else -(∥ΔA ψ∥ * ∥ΔB ψ∥⁻¹) in
@@ -380,11 +418,11 @@ begin
            - re (r • 𝑖 * ⟪ψ, ((ΔB : operator 𝕜 E) * ΔA) ψ⟫)
            + re (r • 𝑖 * ⟪ψ, ((ΔA : operator 𝕜 E) * ΔB) ψ⟫)
            + re (↑(r^2 : ℝ) * ⟪ΔB ψ, ΔB ψ⟫)
-    : by simp only [←hermitian_inner, mul_apply, hermitian_apply]
+    : by simp only [←hermitian.inner_comm, mul_apply, hermitian.apply]
        ... = re ⟪ΔA ψ, ΔA ψ⟫
            - re (r • ⟪ψ, -𝑖[ΔA, ΔB] ψ⟫)
            + re (↑(r^2 : ℝ) * ⟪ΔB ψ, ΔB ψ⟫)
-    : by simp only [communitator_hermitian_apply, inner_sub_right, inner_smul_right, smul_sub, smul_mul_assoc, add_monoid_hom.map_sub]; ring
+    : by simp only [communitator_hermitian.apply, inner_sub_right, inner_smul_right, smul_sub, smul_mul_assoc, add_monoid_hom.map_sub]; ring
        ... = ∥ΔA ψ∥^2 + r^2 * ∥ΔB ψ∥^2 - r * re ⟪ψ, -𝑖[ΔA, ΔB] ψ⟫
     : by simp only [of_real_mul_re, smul_re, norm_sq_eq_inner, sub_add_eq_add_sub],
   have le : r * re ⟪ψ, -𝑖[ΔA, ΔB] ψ⟫ ≤ ∥ΔA ψ∥^2 + r^2 * ∥ΔB ψ∥^2, from sub_nonneg.mp this,
@@ -408,33 +446,33 @@ begin
   have : re ⟪ψ, -𝑖[ΔA, ΔB] ψ⟫^2 ≤ ∥ΔA ψ∥^2 * ∥ΔB ψ∥^2 * 4, from le_of_mul_le_mul_left le_sq r_pos,
   have : re ⟪ψ, -𝑖[ΔA, ΔB] ψ⟫^2 / 4 ≤ ∥ΔA ψ∥^2 * ∥ΔB ψ∥^2,
     from div_le_of_nonneg_of_le_mul (le_of_lt zero_lt_four) (mul_nonneg (sq_nonneg _) (sq_nonneg _)) this, 
-  simp only [fluctuation_eq_norm_sq], exact this
+  rw ←communitator_hemitian_eq_diff, simp only [fluctuation_eq_norm_sq], exact this
 end
 
 theorem fluctuation_lower_bound (inonzero : 𝑖 ≠ 0) (A B : hermitian 𝕜 E) (ψ : E) :
-  (re ⟪ψ, -𝑖[diff A ψ, diff B ψ] ψ⟫)^2 / 4 ≤ 𝛥 A ψ * 𝛥 B ψ :=
+  (re ⟪ψ, -𝑖[A, B] ψ⟫)^2 / 4 ≤ 𝛥 A ψ * 𝛥 B ψ :=
 begin
   by_cases C₁ : ∥diff A ψ ψ∥ = 0,
   { have eql : 𝛥 A ψ * 𝛥 B ψ = 0, { simp [fluctuation_eq_norm_sq, C₁] },
     have eqr : ⟪ψ, -𝑖[diff A ψ, diff B ψ] ψ⟫ = 0,
       calc ⟪ψ, -𝑖[diff A ψ, diff B ψ] ψ⟫ = -𝑖 * ⟪ψ, (diff A ψ : operator 𝕜 E) (diff B ψ ψ) - diff B ψ (diff A ψ ψ)⟫
-        : by simp only [communitator_hermitian_apply', communitator, inner_smul_right, sub_apply, mul_apply, hermitian_apply]
+        : by simp only [communitator_hermitian.apply', communitator, inner_smul_right, sub_apply, mul_apply, hermitian.apply]
                                      ... = -𝑖 * ⟪ψ, diff A ψ  (diff B ψ ψ)⟫
-        : by {simp only [norm_eq_zero.mp C₁, hermitian_app_zero, sub_zero, hermitian_apply]}
-                                     ... = 0 : by rw [hermitian_inner, norm_eq_zero.mp C₁]; simp only [inner_zero_left, mul_zero],
-    rw [eql, eqr], simp },
+        : by {simp only [norm_eq_zero.mp C₁, hermitian.map_zero, sub_zero, hermitian.apply]}
+                                     ... = 0 : by rw [hermitian.inner_comm, norm_eq_zero.mp C₁]; simp only [inner_zero_left, mul_zero],
+    rw [←communitator_hemitian_eq_diff, eql, eqr], simp },
   by_cases C₂ : ∥diff B ψ ψ∥ = 0,
-  { have eql : 𝛥 A ψ * 𝛥 B ψ = 0,
-  { simp [fluctuation_eq_norm_sq, C₂] },
+  { have eql : 𝛥 A ψ * 𝛥 B ψ = 0, { simp [fluctuation_eq_norm_sq, C₂] },
     have eqr : ⟪ψ, -𝑖[diff A ψ, diff B ψ] ψ⟫ = 0,
       calc ⟪ψ, -𝑖[diff A ψ, diff B ψ] ψ⟫ = -𝑖 * ⟪ψ, (diff A ψ : operator 𝕜 E) (diff B ψ ψ) - diff B ψ (diff A ψ ψ)⟫
-        : by simp only [communitator_hermitian_apply', communitator, inner_smul_right, sub_apply, mul_apply, hermitian_apply]
+        : by simp only [communitator_hermitian.apply', communitator, inner_smul_right, sub_apply, mul_apply, hermitian.apply]
                                      ... = -𝑖 * -⟪ψ, diff B ψ  (diff A ψ ψ)⟫
-        : by simp only [norm_eq_zero.mp C₂, hermitian_app_zero, ←neg_eq_zero_sub, inner_neg_right, hermitian_apply]
-                                     ... = 0 : by rw [hermitian_inner, norm_eq_zero.mp C₂]; simp only [inner_zero_left, neg_zero, mul_zero],
-    rw [eql, eqr], simp },
+        : by simp only [norm_eq_zero.mp C₂, hermitian.map_zero, ←neg_eq_zero_sub, inner_neg_right, hermitian.apply]
+                                     ... = 0 : by rw [hermitian.inner_comm, norm_eq_zero.mp C₂]; simp only [inner_zero_left, neg_zero, mul_zero],
+    rw [←communitator_hemitian_eq_diff, eql, eqr], simp },
   exact fluctuation_lower_bound_nonzero _ inonzero A B ψ C₁ C₂
 end
+
 
 end inner_product_space
 
