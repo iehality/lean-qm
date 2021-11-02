@@ -59,15 +59,16 @@ def Pauli₂ : operator ℂ (ℂ^bool) := [0, -𝑖 | -𝑖,  0].to_operator'
 def Pauli₃ : operator ℂ (ℂ^bool) := [1,  0 |  0, -1].to_operator'
 
 lemma Pauli₁_hermitian : is_hermitian Pauli₁ :=
-is_hermitian_of_eq Pauli₁ (λ x y, by {
+(λ x y, by {
   have : ∀ v, [0, 1|1, 0].mul_vec v = vec2 (v tt) (v ff), 
   { intros v, funext b, cases b; simp[matrix.mul_vec, matrix.dot_product] },
   simp[Pauli₁, this], exact add_comm _ _ })
 
 lemma Pauli₂_hermitian : is_hermitian Pauli₂ :=
-is_hermitian_of_eq Pauli₂ (λ x y, by {
-  have : ∀ v, [0, 1|1, 0].mul_vec v = vec2 (v tt) (v ff), 
+(λ x y, by {
+  have : ∀ v, [0, -𝑖| -𝑖, 0].mul_vec v = -𝑖 • vec2 (v tt) (v ff), 
   { intros v, funext b, cases b; simp[matrix.mul_vec, matrix.dot_product] },
+  simp[Pauli₂, this],
   })
 
 end unitary_space
