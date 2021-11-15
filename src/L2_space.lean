@@ -3,6 +3,8 @@ import data.equiv.ring
 import algebra.big_operators.ring
 import measure_theory.function.l2_space
 
+noncomputable theory
+
 notation `L²[`:25 E `, ` μ `]` := measure_theory.Lp E 2 μ
 
 noncomputable instance {α : Type*} {E : Type*} {𝕜 : Type*} [is_R_or_C 𝕜] [measurable_space α]
