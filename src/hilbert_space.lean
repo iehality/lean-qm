@@ -7,6 +7,8 @@ import order.filter.ultrafilter
 import order.filter.partial
 import algebra.support
 import linear_algebra.eigenspace
+import topology.algebra.module
+
 universes u v
 
 noncomputable theory
@@ -26,8 +28,6 @@ variables
 {M₄ : Type*} [topological_space M₄] [add_comm_monoid M₄]
 [module R₁ M₁] [module R₂ M₂]
 [module R₃ M₃] [module R₄ M₄]
-
-
 
 def dom_restrict (f : M₁ →SL[σ₁₂] M₂) (K : submodule R₁ M₁) :
   K →SL[σ₁₂] M₂ := f.comp (subtype_val K)
@@ -377,7 +377,32 @@ begin
   have : x ≠ 0, from orthonormal.ne_zero hu ⟨x, mem⟩, contradiction
 end
 
-end 
+end
+
+structure subspace (𝕜 : Type u) [is_R_or_C 𝕜] (E : Type v) [inner_product_space 𝕜 E] [complete_space E] :=
+(carrier : submodule 𝕜 E)
+(complete : complete_space carrier)
+
+instance : has_coe (subspace 𝕜 E) (submodule 𝕜 E) := ⟨subspace.carrier⟩
+
+instance subspace.inner_product_space (K : subspace 𝕜 E) : inner_product_space 𝕜 K := submodule.inner_product_space K
+
+instance subspace.complete_space (K : subspace 𝕜 E) : complete_space K := K.complete
+
+instance : has_bot (subspace 𝕜 E) := ⟨{ carrier := ⊥, complete := complete_of_proper}⟩
+
+instance : has_top (subspace 𝕜 E) :=
+⟨{ carrier  := ⊤,
+   complete := is_complete.complete_space_coe complete_univ }⟩
+
+def closure (s : submodule 𝕜 E) : subspace 𝕜 E :=
+{ carrier := topological_closure s }
+
+namespace subspace
+
+
+
+end subspace
 
 end inner_product_space
 
