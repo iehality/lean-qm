@@ -7,7 +7,7 @@ import order.filter.ultrafilter
 import order.filter.partial
 import algebra.support
 import linear_algebra.eigenspace
-import topology.algebra.module
+import topology.algebra.module.basic
 
 universes u v
 
@@ -66,8 +66,8 @@ calc f * power f n = power f 1 * power f n : by simp only [power_one]
 variables [topological_space R₁] [smul_comm_class R₁ R₁ M₁]
   [has_continuous_smul R₁ M₁]
 
-instance : smul_comm_class R₁ (M₁ →L[R₁] M₁) (M₁ →L[R₁] M₁) :=
-⟨λ c f g, by { show c • f * g = f * (c • g), ext x, simp only [mul_apply, smul_apply, map_smul] }⟩
+--instance : smul_comm_class R₁ (M₁ →L[R₁] M₁) (M₁ →L[R₁] M₁) :=
+--⟨λ c f g, by { show c • f * g = f * (c • g), ext x, simp only [mul_apply, smul_apply, map_smul] }⟩
 
 end continuous_linear_map
 
@@ -81,7 +81,7 @@ local notation `⋆` := (star_ring_aut : ring_aut 𝕜)
 
 local notation `⟪`x`, `y`⟫` := @inner 𝕜 E _ x y
 
-local notation `〈` x `|`:= inner_right x
+local notation `〈` x `|`:= innerSL x
 
 local notation `𝑖` := @is_R_or_C.I 𝕜 _
 
@@ -91,16 +91,16 @@ local notation `𝑖` := @is_R_or_C.I 𝕜 _
 variables {𝕜} {E}
 variables [complete_space E]
 
-lemma inner_right_norm (x : E) : ∥@inner_right 𝕜 E _ _ x∥ ≤ ∥x∥ :=
+lemma inner_right_norm (x : E) : ∥@innerSL 𝕜 E _ _ x∥ ≤ ∥x∥ :=
 continuous_linear_map.op_norm_le_bound _ (norm_nonneg x) (λ x, by simp[norm_inner_le_norm])
 
 def adjoint (A : operator 𝕜 E) : operator 𝕜 E :=
 let to_dual' : E →ₛₗ[(⋆ : 𝕜 →+* 𝕜)] normed_space.dual 𝕜 E := 
       { to_fun := λ x, ((〈x|).comp A),
-        map_add' := λ x y, by { ext z, simp only [continuous_linear_map.comp_apply, inner_right_apply, inner_add_left], refl }, 
+        map_add' := λ x y, by { ext z, simp only [continuous_linear_map.comp_apply, innerSL_apply_coe, inner_add_left], refl }, 
         map_smul' := λ c x, by { 
-          ext y, simp only [continuous_linear_map.comp_apply, inner_right_apply, inner_smul_left,continuous_linear_map.smul_apply,
-            continuous_linear_map.comp_apply, inner_right_apply], refl } },
+          ext y, simp only [continuous_linear_map.comp_apply, innerSL_apply_coe, inner_smul_left,continuous_linear_map.smul_apply,
+            continuous_linear_map.comp_apply], refl } },
     A' := (to_dual 𝕜 E).symm.to_linear_equiv.to_linear_map.comp to_dual' in
 begin
   have : continuous A', 
@@ -115,11 +115,6 @@ end
 postfix `†`:90 := adjoint
 
 variables (𝕜)
-
-theorem to_dual_symm_apply (d : E →L[𝕜] 𝕜) (x : E) : ⟪(to_dual 𝕜 E).symm d, x⟫ = d x :=
-by { have : (to_dual 𝕜 E) ((to_dual 𝕜 E).symm d) x = d x,
-       from congr_fun (congr_arg coe_fn ((to_dual 𝕜 E).to_linear_equiv.right_inv d)) x,
-     simp only [to_dual_apply] at this, exact this }
 
 variables {𝕜}
 
@@ -379,30 +374,16 @@ end
 
 end
 
-structure subspace (𝕜 : Type u) [is_R_or_C 𝕜] (E : Type v) [inner_product_space 𝕜 E] [complete_space E] :=
-(carrier : submodule 𝕜 E)
-(complete : complete_space carrier)
+@[simp] lemma submodule.topological_closure_eq (s : submodule 𝕜 E) [c : complete_space s] :
+  s.topological_closure = s :=
+by { suffices : (s.topological_closure : set E) = s, by { exact set_like.ext' this },
+     simp, 
+     have : is_closed (s : set E) := (complete_space_coe_iff_is_complete.mp c).is_closed,
+     exact this.closure_eq }
 
-instance : has_coe (subspace 𝕜 E) (submodule 𝕜 E) := ⟨subspace.carrier⟩
-
-instance subspace.inner_product_space (K : subspace 𝕜 E) : inner_product_space 𝕜 K := submodule.inner_product_space K
-
-instance subspace.complete_space (K : subspace 𝕜 E) : complete_space K := K.complete
-
-instance : has_bot (subspace 𝕜 E) := ⟨{ carrier := ⊥, complete := complete_of_proper}⟩
-
-instance : has_top (subspace 𝕜 E) :=
-⟨{ carrier  := ⊤,
-   complete := is_complete.complete_space_coe complete_univ }⟩
-
-def closure (s : submodule 𝕜 E) : subspace 𝕜 E :=
-{ carrier := topological_closure s }
-
-namespace subspace
-
-
-
-end subspace
+@[simp] lemma submodule.topological_closure_eq' {s : submodule 𝕜 E} (c : complete_space s) :
+  s.topological_closure = s :=
+by exactI submodule.topological_closure_eq s
 
 end inner_product_space
 
