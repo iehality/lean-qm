@@ -25,19 +25,34 @@ structure cl_submodule :=
 
 variables {𝕜} {E}
 
-@[simp] lemma submodule_top_topological_closure : (⊤ : submodule 𝕜 E).topological_closure = ⊤ :=
+@[simp] lemma submodule.top_topological_closure : (⊤ : submodule 𝕜 E).topological_closure = ⊤ :=
 submodule.topological_closure_eq' complete_univ.complete_space_coe
 
-@[simp] lemma submodule_bot_topological_closure : (⊤ : submodule 𝕜 E).topological_closure = ⊤ :=
+@[simp] lemma submodule.bot_topological_closure : (⊤ : submodule 𝕜 E).topological_closure = ⊤ :=
 by simp
+
+@[simp] lemma submodule.orthogonal3 (K : submodule 𝕜 E) : Kᗮᗮᗮ = Kᗮ :=
+(Kᗮ).orthogonal_orthogonal
+
+@[simp] lemma submodule.orthogonal_topological_closure_eq_orthogonal (K : submodule 𝕜 E) :
+  K.topological_closureᗮ = Kᗮ :=
+begin
+  have s_cl_o_o : K.topological_closureᗮᗮ = K.topological_closure,
+  { have : complete_space K.topological_closure, from K.is_closed_topological_closure.complete_space_coe,
+    by exactI K.topological_closure.orthogonal_orthogonal },
+  have : K.topological_closureᗮᗮ = Kᗮᗮ, { simp[s_cl_o_o, K.orthogonal_orthogonal_eq_closure] },
+  calc K.topological_closureᗮ = K.topological_closureᗮᗮᗮ : by simp[s_cl_o_o]
+                          ... = Kᗮᗮᗮ                     : by simp[this]
+                          ... = Kᗮ                       : by simp
+end
 
 namespace cl_submodule
 open submodule
 
 instance : has_coe (cl_submodule 𝕜 E) (submodule 𝕜 E) := ⟨cl_submodule.carrier⟩
 
-@[simp] lemma coe_mk_eq (s : submodule 𝕜 E) (c : complete_space s) :
-  (↑({carrier := s, complete := c} : cl_submodule 𝕜 E) : submodule 𝕜 E) = s := rfl
+@[simp] lemma coe_mk_eq (K : submodule 𝕜 E) (c : complete_space K) :
+  (↑({carrier := K, complete := c} : cl_submodule 𝕜 E) : submodule 𝕜 E) = K := rfl
 
 instance inner_product_space (K : cl_submodule 𝕜 E) : inner_product_space 𝕜 K := submodule.inner_product_space K
 
@@ -46,36 +61,36 @@ instance complete_space (K : cl_submodule 𝕜 E) : complete_space K := K.comple
 instance complete_space' (K : cl_submodule 𝕜 E) : complete_space (↑K : submodule 𝕜 E) := K.complete
 
 instance : set_like (cl_submodule 𝕜 E) E :=
-⟨λ s, ↑s, λ p q h, by { cases p; cases q; congr', simp* at* }⟩
+⟨λ K, ↑K, λ p q h, by { cases p; cases q; congr', simp* at* }⟩
 
-@[simp] lemma le_mk_iff {s t : submodule 𝕜 E} {cs : complete_space s} {ct : complete_space t} :
-  ({carrier := s, complete := cs} : cl_submodule 𝕜 E) ≤ ({carrier := t, complete := ct} : cl_submodule 𝕜 E) ↔ s ≤ t := 
-by refl
+@[simp] lemma le_mk_iff {K L : submodule 𝕜 E} {cK : complete_space K} {cL : complete_space L} :
+  ({carrier := K, complete := cK} : cl_submodule 𝕜 E) ≤ ({carrier := L, complete := cL} : cl_submodule 𝕜 E) ↔
+  K ≤ L := by refl
 
-lemma closure_mem_def {s : cl_submodule 𝕜 E} {x : E} : x ∈ s ↔ x ∈ (s : submodule 𝕜 E) := by unfold_coes; refl
+lemma closure_mem_def {K : cl_submodule 𝕜 E} {x : E} : x ∈ K ↔ x ∈ (K : submodule 𝕜 E) := by unfold_coes; refl
 
-lemma le_coe_iff {s t : cl_submodule 𝕜 E} : (↑s : submodule 𝕜 E) ≤ ↑t ↔ s ≤ t :=
-by { rcases s; rcases t, simp }
+lemma le_coe_iff {K L : cl_submodule 𝕜 E} : (↑K : submodule 𝕜 E) ≤ ↑L ↔ K ≤ L :=
+by { rcases K; rcases L, simp }
 
-def closure (s : submodule 𝕜 E) : cl_submodule 𝕜 E :=
-{ carrier := s.topological_closure, complete := s.is_closed_topological_closure.complete_space_coe }
+def closure (K : submodule 𝕜 E) : cl_submodule 𝕜 E :=
+{ carrier := K.topological_closure, complete := K.is_closed_topological_closure.complete_space_coe }
 
-lemma ext : ∀ {s t : cl_submodule 𝕜 E} (eq : (s : submodule 𝕜 E) = t), s = t
+lemma ext : ∀ {K L : cl_submodule 𝕜 E} (eq : (K : submodule 𝕜 E) = L), K = L
 | ⟨s, _⟩ ⟨t, _⟩ rfl := rfl
 
-lemma closure_eq_of_complete (s : submodule 𝕜 E) [c : complete_space s] :
-  closure s = (⟨s, c⟩ : cl_submodule 𝕜 E) := by { refine ext _, simp[closure] }
+lemma closure_eq_of_complete (K : submodule 𝕜 E) [c : complete_space K] :
+  closure K = (⟨K, c⟩ : cl_submodule 𝕜 E) := by { refine ext _, simp[closure] }
 
-@[simp] lemma closure_coe_eq (s : cl_submodule 𝕜 E) :
-  closure (s : submodule 𝕜 E) = s := by { rcases s with ⟨s, c⟩, simp, exactI closure_eq_of_complete s }
+@[simp] lemma closure_coe_eq (K : cl_submodule 𝕜 E) :
+  closure (K : submodule 𝕜 E) = K := by { rcases K with ⟨K, c⟩, simp, exactI closure_eq_of_complete K }
 
-@[simp] lemma coe_closure_eq (s : submodule 𝕜 E) :
-  (closure s : submodule 𝕜 E) = s.topological_closure := by simp[closure]
+@[simp] lemma coe_closure_eq (K : submodule 𝕜 E) :
+  (closure K : submodule 𝕜 E) = K.topological_closure := by simp[closure]
 
-lemma closure_mem_iff {s : submodule 𝕜 E} {x : E} : x ∈ closure s ↔ x ∈ s.topological_closure :=
+lemma closure_mem_iff {K : submodule 𝕜 E} {x : E} : x ∈ closure K ↔ x ∈ K.topological_closure :=
 by simp[closure_mem_def, closure]
 
-lemma le_closure_mono {s t : submodule 𝕜 E} (le : s ≤ t) : closure s ≤ closure t :=
+lemma le_closure_mono {K L : submodule 𝕜 E} (le : K ≤ L) : closure K ≤ closure L :=
 λ x h, by { simp only [closure_mem_iff] at h ⊢, exact submodule.topological_closure_mono le h }
 
 instance : complete_lattice (cl_submodule 𝕜 E) :=
@@ -138,26 +153,54 @@ by { show (↑(closure ⊤ : cl_submodule 𝕜 E) : submodule 𝕜 E) = ⊤, sim
 by { show (↑(closure ⊥ : cl_submodule 𝕜 E) : submodule 𝕜 E) = ⊥, simp }
 
 instance : has_orthocompl (cl_submodule 𝕜 E) :=
-⟨λ s, {carrier := (↑s)ᗮ, complete := submodule.orthogonal.complete_space _}⟩
+⟨λ K, {carrier := (↑K)ᗮ, complete := submodule.orthogonal.complete_space _}⟩
 
-lemma sup_coe (s t : cl_submodule 𝕜 E) :
-  (↑(s ⊔ t) : submodule 𝕜 E) = (↑s ⊔ ↑t : submodule 𝕜 E).topological_closure := by refl
+lemma sup_coe (K L : cl_submodule 𝕜 E) :
+  (↑(K ⊔ L) : submodule 𝕜 E) = (↑K ⊔ ↑L : submodule 𝕜 E).topological_closure := by refl
 
-lemma inf_coe (s t : cl_submodule 𝕜 E) :
-  (↑(s ⊓ t) : submodule 𝕜 E) = (↑s ⊓ ↑t : submodule 𝕜 E).topological_closure := by refl
+lemma inf_coe (K L : cl_submodule 𝕜 E) :
+  (↑(K ⊓ L) : submodule 𝕜 E) = (↑K ⊓ ↑L : submodule 𝕜 E).topological_closure := by refl
 
-@[simp] lemma compl_coe (s : cl_submodule 𝕜 E) : (↑(s′) : submodule 𝕜 E) = (↑s)ᗮ := by refl
+lemma Sup_coe (s : set (cl_submodule 𝕜 E)) :
+  (↑(Sup s) : submodule 𝕜 E) = (⨆ x ∈ s, (x : submodule 𝕜 E)).topological_closure :=
+by { show (Sup (coe '' s : set (submodule 𝕜 E))).topological_closure = (⨆ x ∈ s, (x : submodule 𝕜 E)).topological_closure,
+     simp[Sup_image] }
 
-@[simp] lemma double_compl (s : cl_submodule 𝕜 E) : s′′ = s := ext (by simp)
+lemma Sup_coe' (s : set (cl_submodule 𝕜 E)) :
+  (↑(Sup s) : submodule 𝕜 E) = (⨆ x : s, (x : submodule 𝕜 E)).topological_closure :=
+by { show (Sup (coe '' s : set (submodule 𝕜 E))).topological_closure = (⨆ x : s, (x : submodule 𝕜 E)).topological_closure,
+     simp[Sup_image'] }
 
-@[simp] lemma sup_compl_eq_top (s : cl_submodule 𝕜 E) : s ⊔ s′ = ⊤ :=
-ext (by simp[sup_coe, submodule.sup_orthogonal_of_complete_space])
+lemma supr_coe {ι} (f : ι → cl_submodule 𝕜 E) :
+  (↑(supr f) : submodule 𝕜 E) = (⨆ i, (f i : submodule 𝕜 E)).topological_closure :=
+by { show (↑(Sup (set.range f)) : submodule 𝕜 E) = (⨆ i, (f i : submodule 𝕜 E)).topological_closure,
+     simp[Sup_coe, show (⨆ x i (h : f i = x), (x : submodule 𝕜 E)) = (⨆ i x (h : f i = x), (x : submodule 𝕜 E)), from supr_comm] }
 
-@[simp] lemma inf_compl_eq_bot (s : cl_submodule 𝕜 E) : s ⊓ s′ = ⊥ :=
-ext (by simp[inf_coe, submodule.inf_orthogonal_eq_bot])
+lemma Inf_coe (s : set (cl_submodule 𝕜 E)) :
+  (↑(Inf s) : submodule 𝕜 E) = (⨅ x ∈ s, (x : submodule 𝕜 E)).topological_closure :=
+by { show (Inf (coe '' s : set (submodule 𝕜 E))).topological_closure = (⨅ x ∈ s, (x : submodule 𝕜 E)).topological_closure,
+     simp[Inf_image] }
 
-lemma contraposition (s t : cl_submodule 𝕜 E) : s ≤ t → t′ ≤ s′ := λ h,
-le_coe_iff.mp (by { simp, exact submodule.orthogonal_le (le_coe_iff.mpr h) })
+lemma Inf_coe' (s : set (cl_submodule 𝕜 E)) :
+  (↑(Inf s) : submodule 𝕜 E) = (⨅ x : s, (x : submodule 𝕜 E)).topological_closure :=
+by { show (Inf (coe '' s : set (submodule 𝕜 E))).topological_closure = (⨅ x : s, (x : submodule 𝕜 E)).topological_closure,
+     simp[Inf_image'] }
+
+lemma infi_coe {ι} (f : ι → cl_submodule 𝕜 E) :
+  (↑(infi f) : submodule 𝕜 E) = (⨅ i, (f i : submodule 𝕜 E)).topological_closure :=
+by { show (↑(Inf (set.range f)) : submodule 𝕜 E) = (⨅ i, (f i : submodule 𝕜 E)).topological_closure,
+     simp[Inf_coe, show (⨅ x i (h : f i = x), (x : submodule 𝕜 E)) = (⨅ i x (h : f i = x), (x : submodule 𝕜 E)), from infi_comm] }
+
+@[simp] lemma compl_coe (K : cl_submodule 𝕜 E) : (↑(K′) : submodule 𝕜 E) = (↑K)ᗮ := by refl
+
+instance : complete_ortholattice (cl_submodule 𝕜 E) :=
+{ double_compl := λ a, ext (by simp),
+  contraposition := λ a b h, le_coe_iff.mp (by { simp, exact submodule.orthogonal_le (le_coe_iff.mpr h) }),
+  sup_compl := λ a b, ext (by simp[sup_coe, inf_coe, submodule.inf_orthogonal]),
+  Sup_compl := λ s, by simp[←infi_subtype''];
+    exact ext (by simp[Sup_coe', infi_coe, submodule.infi_orthogonal]),
+  inf_compl_le_bot := λ a, le_coe_iff.mp (by simp[inf_coe, submodule.inf_orthogonal_eq_bot]),
+  top_le_sup_compl := λ a, le_coe_iff.mp (by simp[sup_coe, submodule.sup_orthogonal_of_complete_space]) }
 
 end cl_submodule
 
