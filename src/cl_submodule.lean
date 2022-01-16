@@ -54,6 +54,7 @@ instance : has_coe (cl_submodule 𝕜 E) (submodule 𝕜 E) := ⟨cl_submodule.c
 @[simp] lemma coe_mk_eq (K : submodule 𝕜 E) (c : complete_space K) :
   (↑({carrier := K, complete := c} : cl_submodule 𝕜 E) : submodule 𝕜 E) = K := rfl
 
+
 instance inner_product_space (K : cl_submodule 𝕜 E) : inner_product_space 𝕜 K := submodule.inner_product_space K
 
 instance complete_space (K : cl_submodule 𝕜 E) : complete_space K := K.complete
@@ -66,6 +67,9 @@ instance : set_like (cl_submodule 𝕜 E) E :=
 @[simp] lemma le_mk_iff {K L : submodule 𝕜 E} {cK : complete_space K} {cL : complete_space L} :
   ({carrier := K, complete := cK} : cl_submodule 𝕜 E) ≤ ({carrier := L, complete := cL} : cl_submodule 𝕜 E) ↔
   K ≤ L := by refl
+
+@[simp] lemma mem_mk_iff {K : submodule 𝕜 E} {cK : complete_space K} (a : E) :
+  a ∈ ({ carrier := K, complete := cK} : cl_submodule 𝕜 E) ↔ a ∈ K := by refl
 
 lemma closure_mem_def {K : cl_submodule 𝕜 E} {x : E} : x ∈ K ↔ x ∈ (K : submodule 𝕜 E) := by unfold_coes; refl
 
@@ -201,6 +205,23 @@ instance : complete_ortholattice (cl_submodule 𝕜 E) :=
     exact ext (by simp[Sup_coe', infi_coe, submodule.infi_orthogonal]),
   inf_compl_le_bot := λ a, le_coe_iff.mp (by simp[inf_coe, submodule.inf_orthogonal_eq_bot]),
   top_le_sup_compl := λ a, le_coe_iff.mp (by simp[sup_coe, submodule.sup_orthogonal_of_complete_space]) }
+
+instance : orthomodular_lattice (cl_submodule 𝕜 E) := ortholattice.oml_of_orthomoduler'' (
+  begin
+    rintros ⟨K, cK⟩ ⟨L, cL⟩ le h v y_z_in_L, simp[inf_coe] at le y_z_in_L ⊢,
+    have eq_bot : Kᗮ ⊓ L = ⊥,
+    { have h' := le_coe_iff.mpr h, simp[inf_coe] at h',
+      have : Kᗮ ⊓ L ≤ (Kᗮ ⊓ L).topological_closure, from (Kᗮ ⊓ L).submodule_topological_closure,
+      simp[h'] at this, exact this },
+    have : ∃ (y ∈ K) (z ∈ Kᗮ), v = y + z, from by exactI K.exists_sum_mem_mem_orthogonal v,
+    rcases this with ⟨y, y_in_K, z, z_in_Ko, rfl⟩,
+    have : z ∈ Kᗮ ⊓ L,
+    { simp[z_in_Ko],
+      have : (y + z) - y ∈ L, exact L.sub_mem y_z_in_L (le y_in_K), 
+      simp[add_sub_cancel' y z] at this, exact this },
+    simp[eq_bot] at this, rcases this with rfl,
+    simp[y_in_K]
+  end)
 
 end cl_submodule
 

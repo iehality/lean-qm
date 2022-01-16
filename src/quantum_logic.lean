@@ -14,6 +14,9 @@ class ortholattice (α : Type u) extends lattice α, bounded_order α, has_ortho
 (inf_compl_le_bot : ∀ x : α, x ⊓ x′ ≤ ⊥)
 (top_le_sup_compl : ∀ x : α, ⊤ ≤ x ⊔ x′)
 
+class orthomodular_lattice (α : Type u) extends ortholattice α :=
+(orthomodularity : ∀ x y : α, x ⊔ (x′ ⊓ (x ⊔ y)) = x ⊔ y)
+
 namespace ortholattice
 variables {α : Type u} [ortholattice α]
 
@@ -88,6 +91,13 @@ def equiv_OA (a b c : α) : α := (a ⟶₁ c) ⊓ (b ⟶₁ c) ⊔ (a′ ⟶₁
 
 notation `≣ᴼᴬ` := equiv_OA
 
+def oml_of_orthomoduler'' (H : ∀ a b : α, a ≤ b → a′ ⊓ b ≤ ⊥ → b ≤ a) : orthomodular_lattice α :=
+⟨λ a b, by {
+  have : a ⊔ a′ ⊓ (a ⊔ b) ≤ a ⊔ b, { simp },
+  refine antisymm this (H _ _ this _),
+  calc (a ⊔ a′ ⊓ (a ⊔ b))′ ⊓ (a ⊔ b) = a′ ⊓ (a′ ⊓ (a ⊔ b))′ ⊓ (a ⊔ b)   : by simp[sup_compl]
+                                 ... = (a′ ⊓ (a ⊔ b))′ ⊓ (a′ ⊓ (a ⊔ b)) : by simp[@inf_comm _ _ a′, inf_assoc]
+                                 ... ≤ ⊥                                : by simp }⟩
 
 end ortholattice
 
@@ -121,9 +131,6 @@ by { show (Inf (set.range f))′ = ⨆ i, (f i)′,
      simp [Inf_compl (set.range f), show (⨆ x i (h : f i = x), x′) = (⨆ i x (h : f i = x), x′), from supr_comm] }
 
 end complete_ortholattice
-
-class orthomodular_lattice (α : Type u) extends ortholattice α :=
-(orthomodularity : ∀ x y : α, x ⊔ (x′ ⊓ (x ⊔ y)) = x ⊔ y)
 
 namespace orthomodular_lattice
 variables {α : Type u} [orthomodular_lattice α]
@@ -277,18 +284,16 @@ lemma commutes.infl {a b c : α} (h₁ : a ⫰ c) (h₂ : b ⫰ c) : a ⊓ b ⫰
 
 theorem Gudder_Schelp {a b c : α} (h₁ : a ⫰ b) (h₂ : b ⫰ c) (h₃ : a ⫰ b ⊓ c) : a ⊓ b ⫰ c :=
 begin
-  simp[(⫰)],
   have c₁ : a ⊔ c′ ⫰ b ⊓ c,
     from (h₃.symm.supr (h₂.symm.infr (commutes.refl c)).symm.complr).symm,
   have c₂ : a ⊔ c′ ⫰ a ⊓ b, from (commutes_of_le ((show a ⊓ b ≤ a, by simp).trans (by simp))).symm,
   have c₃ : b ⊓ c ⫰ c′, from h₂.complr.infl (commutes.refl c).complr,
   have eqn₁ : a ⊓ b ⊓ (a ⊔ c′) = a ⊓ b, { simp, from (show a ⊓ b ≤ a, by simp).trans (by simp) },
-  have eqn₂ : a ⊓ b ⊓ c = (a ⊔ c′) ⊓ b ⊓ c, { 
-    calc a ⊓ b ⊓ c = b ⊓ c ⊓ a : by simp[@inf_comm _ _ a, inf_assoc]
+  have eqn₂ : a ⊓ b ⊓ c = (a ⊔ c′) ⊓ b ⊓ c,
+    calc a ⊓ b ⊓ c = b ⊓ c ⊓ a                  : by simp[@inf_comm _ _ a, inf_assoc]
                ... = (b ⊓ c) ⊓ a ⊔ (b ⊓ c) ⊓ c′ : by simp[show (b ⊓ c) ⊓ c′ = ⊥, by simp[inf_assoc]]
-               ... = (b ⊓ c) ⊓ (a ⊔ c′) : Foulis_Holland₁ h₃.symm c₃
-               ... = (a ⊔ c′) ⊓ b ⊓ c : by simp[@inf_comm _ _ (a ⊔ c′), inf_assoc]
-   },
+               ... = (b ⊓ c) ⊓ (a ⊔ c′)         : Foulis_Holland₁ h₃.symm c₃
+               ... = (a ⊔ c′) ⊓ b ⊓ c           : by simp[@inf_comm _ _ (a ⊔ c′), inf_assoc],
   refine commutes_of_dual _,
   calc a ⊓ b = b ⊓ c ⊓ a ⊔ a ⊓ b                           : by simp; simp[inf_assoc]
          ... = a ⊓ b ⊓ c ⊔ a ⊓ b                           : by simp[@inf_comm _ _ _ a, ←inf_assoc]
@@ -310,7 +315,6 @@ end
 
 theorem Gudder_Schelp_Beran {a b c : α} (h₁ : b ⫰ c) (h₂ : a ⫰ b ⊓ c) : a ⊓ b ⫰ c :=
 begin
-  simp[(⫰)],
   calc a ⊓ b = b ⊓ a : inf_comm
          ... = b ⊓ (b′ ⊔ (b ⊓ a)) : eq.symm (orthomodularity_dual _ _)
          ... = 
