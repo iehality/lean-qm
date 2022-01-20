@@ -1,6 +1,8 @@
 import order.lattice
 import order.complete_lattice
 import order.bounded_order
+import order.boolean_algebra
+import data.set_like.basic
 
 universes u v
 
@@ -149,6 +151,14 @@ infix ` ⫰ `:50 := commutes
 
 lemma commutes_of_le_sup {a b : α} (h : a ≤ (a ⊓ b) ⊔ (a ⊓ b′)) : a ⫰ b := antisymm h (by simp)
 
+@[simp] lemma commutes.topr (a : α) : a ⫰ ⊤ := commutes_of_le_sup (by simp)
+
+@[simp] lemma commutes.botr (a : α) : a ⫰ ⊥ := commutes_of_le_sup (by simp)
+
+@[simp] lemma commutes.topl (a : α) : ⊤ ⫰ a := commutes_of_le_sup (by simp)
+
+@[simp] lemma commutes.botl (a : α) : ⊥ ⫰ a := commutes_of_le_sup (by simp)
+
 lemma commutes_of_le {a b : α} (h : a ≤ b) : a ⫰ b :=
 by { have : a ⊓ b = a, from inf_eq_left.mpr h,
      simp[(⫰), this] }
@@ -185,6 +195,12 @@ end
 
 lemma commutes.compll {α} [orthomodular_lattice α] {a b : α} : a ⫰ b → a′ ⫰ b :=
 λ h, h.symm.complr.symm
+
+lemma commutes.compll_iff {a b : α} : a′ ⫰ b ↔ a ⫰ b:=
+⟨λ h, by { have := h.compll, simp at this, exact this }, λ h, h.compll⟩
+
+lemma commutes_of_ge {a b : α} (h : b ≤ a) : a ⫰ b :=
+(commutes_of_le h).symm
 
 lemma commutes.eql_dual {a b : α} (c : a ⫰ b) : (a ⊔ b) ⊓ (a ⊔ b′) = a :=
 begin
@@ -315,11 +331,216 @@ end
 
 theorem Gudder_Schelp_Beran {a b c : α} (h₁ : b ⫰ c) (h₂ : a ⫰ b ⊓ c) : a ⊓ b ⫰ c :=
 begin
-  calc a ⊓ b = b ⊓ a : inf_comm
-         ... = b ⊓ (b′ ⊔ (b ⊓ a)) : eq.symm (orthomodularity_dual _ _)
-         ... = 
-         ... = a ⊓ b ⊓ c ⊔ a ⊓ b ⊓ c′ : by sorry
+  have h₃ : a′ ⊔ b′ ⫰ b, from commutes.complr_iff.mp (commutes_of_ge (by simp)),
+  have h₄ : a′ ⊔ b′ ⫰ b ⊓ c, from h₂.compll.supl (commutes_of_ge (by simp)).compll,
+  have : (a′ ⊔ b′) ⊓ b ⫰ c, from Gudder_Schelp h₃ h₁ h₄,
+  have : b′ ⊔ b ⊓ a ⫰ c,
+  { have := this.compll, simp[sup_compl, inf_compl] at this,
+    simp[@sup_comm _ _ b′, @inf_comm _ _ b],
+    exact this },
+  have : b ⊓ (b′ ⊔ b ⊓ a) ⫰ c, from h₁.infl this,
+  rw[orthomodularity_dual b a, @inf_comm _ _ b a] at this,
+  exact this
 end
+
+def commutes_set (s : set α) : Prop := ∀ a b ∈ s, a ⫰ b
+
+def gen_set_aux (s : set α) : ℕ → set α
+| 0       := s
+| (n + 1) :=
+    gen_set_aux n ∪ ({⊤, ⊥} ∪
+    {a | ∃ b c ∈ gen_set_aux n, a = b ⊔ c} ∪
+    {a | ∃ b c ∈ gen_set_aux n, a = b ⊓ c} ∪
+    {a | ∃ b ∈ gen_set_aux n, a = b′})
+
+def gen_set (s : set α) := {a | ∃ n, a ∈ gen_set_aux s n}
+
+section
+variables (s : set α)
+
+lemma gen_set_aux_mono :
+  ∀ {m n : ℕ}, m ≤ n → gen_set_aux s m ⊆ gen_set_aux s n :=
+begin
+  suffices : ∀ n m, gen_set_aux s m ⊆ gen_set_aux s (m + n),
+  { intros m n le a mem, have := this (n - m) m mem,
+    simp[nat.add_sub_of_le le] at this, exact this },
+  intros n, induction n with n IH; simp[←nat.add_one, ←add_assoc],
+  { intros m, refl },
+  { intros m,
+    have : gen_set_aux s (m + n) ⊆ gen_set_aux s (m + n + 1),
+    { simp[gen_set_aux] },
+    exact set.subset.trans (IH m) this }
+end
+
+@[simp] lemma gen_set_top_mem :
+  ⊤ ∈ gen_set s := ⟨1, by simp[gen_set_aux]⟩
+
+@[simp] lemma gen_set_bot_mem :
+  ⊥ ∈ gen_set s := ⟨1, by simp[gen_set_aux]⟩
+
+variables {s}
+
+@[simp] lemma gen_set_sup_mem {a b : α}
+  (h₁ : a ∈ gen_set s) (h₂ : b ∈ gen_set s) :
+  a ⊔ b ∈ gen_set s :=
+begin
+  rcases h₁ with ⟨n₁, h₁⟩,
+  rcases h₂ with ⟨n₂, h₂⟩,
+  have mem_a : a ∈ gen_set_aux s (max n₁ n₂), from gen_set_aux_mono s (by simp) h₁,
+  have mem_b : b ∈ gen_set_aux s (max n₁ n₂), from gen_set_aux_mono s (by simp) h₂,
+  refine ⟨max n₁ n₂ + 1, or.inr $ or.inl $ or.inl $ or.inr ⟨a, mem_a, b, mem_b, rfl⟩⟩
+end
+
+@[simp] lemma gen_set_compl_mem {a : α}
+  (h : a ∈ gen_set s) : a′ ∈ gen_set s :=
+by rcases h with ⟨n, h⟩; refine ⟨n + 1, or.inr $ or.inr ⟨a, h, rfl⟩⟩
+
+@[simp] lemma gen_set_inf_mem {a b : α}
+  (h₁ : a ∈ gen_set s) (h₂ : b ∈ gen_set s) :
+  a ⊓ b ∈ gen_set s :=
+begin
+  rcases h₁ with ⟨n₁, h₁⟩,
+  rcases h₂ with ⟨n₂, h₂⟩,
+  have mem_a : a ∈ gen_set_aux s (max n₁ n₂), from gen_set_aux_mono s (by simp) h₁,
+  have mem_b : b ∈ gen_set_aux s (max n₁ n₂), from gen_set_aux_mono s (by simp) h₂,
+  refine ⟨max n₁ n₂ + 1, or.inr $ or.inl $ or.inr ⟨a, mem_a, b, mem_b, rfl⟩⟩
+end
+
+lemma commutes_set_gen_set (h : commutes_set s) : commutes_set (gen_set s) :=
+begin
+  suffices : ∀ n, commutes_set (gen_set_aux s n),
+  { rintros a ⟨n₁, h₁⟩ b ⟨n₂, h₂⟩,
+    have h₁ : a ∈ gen_set_aux s (max n₁ n₂), from gen_set_aux_mono s (by simp) h₁,
+    have h₂ : b ∈ gen_set_aux s (max n₁ n₂), from gen_set_aux_mono s (by simp) h₂,
+    exact this (max n₁ n₂) a h₁ b h₂ },
+  intros n,
+  induction n with n IH; simp[gen_set_aux, h],
+  intros a h₁ b h₂, simp at h₁ h₂,
+  rcases h₁ with
+    (h₁ | (((rfl | rfl) | ⟨a₁, h₁₁, a₂, h₁₂, rfl⟩) | ⟨a₁, h₁₁, a₂, h₁₂, rfl⟩) | ⟨a₁, h₁, rfl⟩); try {simp}, 
+  { rcases h₂ with
+      (h₂ | (((rfl | rfl) | ⟨b₁, h₂₁, b₂, h₂₂, rfl⟩) | ⟨b₁, h₂₁, b₂, h₂₂, rfl⟩) | ⟨b₁, h₂, rfl⟩); try {simp},
+    { exact IH _ h₁ _ h₂ },
+    { exact (IH _ h₁ _ h₂₁).supr (IH _ h₁ _ h₂₂) },
+    { exact (IH _ h₁ _ h₂₁).infr (IH _ h₁ _ h₂₂) },
+    { exact (IH _ h₁ _ h₂) } },
+  { rcases h₂ with
+      (h₂ | (((rfl | rfl) | ⟨b₁, h₂₁, b₂, h₂₂, rfl⟩) | ⟨b₁, h₂₁, b₂, h₂₂, rfl⟩) | ⟨b₁, h₂, rfl⟩); try {simp},
+    { exact (IH _ h₁₁ _ h₂).supl (IH _ h₁₂ _ h₂) },
+    { exact ((IH _ h₁₁ _ h₂₁).supr (IH _ h₁₁ _ h₂₂)).supl ((IH _ h₁₂ _ h₂₁).supr (IH _ h₁₂ _ h₂₂)) },
+    { exact ((IH _ h₁₁ _ h₂₁).infr (IH _ h₁₁ _ h₂₂)).supl ((IH _ h₁₂ _ h₂₁).infr (IH _ h₁₂ _ h₂₂)) },
+    { exact (IH _ h₁₁ _ h₂).supl (IH _ h₁₂ _ h₂) } },
+  { rcases h₂ with
+      (h₂ | (((rfl | rfl) | ⟨b₁, h₂₁, b₂, h₂₂, rfl⟩) | ⟨b₁, h₂₁, b₂, h₂₂, rfl⟩) | ⟨b₁, h₂, rfl⟩); try {simp},
+    { exact (IH _ h₁₁ _ h₂).infl (IH _ h₁₂ _ h₂) },
+    { exact ((IH _ h₁₁ _ h₂₁).supr (IH _ h₁₁ _ h₂₂)).infl ((IH _ h₁₂ _ h₂₁).supr (IH _ h₁₂ _ h₂₂)) },
+    { exact ((IH _ h₁₁ _ h₂₁).infr (IH _ h₁₁ _ h₂₂)).infl ((IH _ h₁₂ _ h₂₁).infr (IH _ h₁₂ _ h₂₂)) },
+    { exact (IH _ h₁₁ _ h₂).infl (IH _ h₁₂ _ h₂) } },
+  { rcases h₂ with
+      (h₂ | (((rfl | rfl) | ⟨b₁, h₂₁, b₂, h₂₂, rfl⟩) | ⟨b₁, h₂₁, b₂, h₂₂, rfl⟩) | ⟨b₁, h₂, rfl⟩); try {simp},
+    { exact (IH _ h₁ _ h₂).compll },
+    { exact (IH _ h₁ _ h₂₁).compll.supr (IH _ h₁ _ h₂₂).compll },
+    { exact (IH _ h₁ _ h₂₁).compll.infr (IH _ h₁ _ h₂₂).compll },
+    { exact (IH _ h₁ _ h₂).compll } }
+end
+
+end
+
+structure suboml_set (α : Type*) [orthomodular_lattice α] :=
+(carrier : α → Prop)
+(top : carrier ⊤)
+(bot : carrier ⊥)
+(sup : ∀ ⦃a b : α⦄, carrier a → carrier b → carrier (a ⊔ b))
+(inf : ∀ ⦃a b : α⦄, carrier a → carrier b → carrier (a ⊓ b))
+(compl : ∀ ⦃a : α⦄, carrier a → carrier a′)
+
+instance : set_like (suboml_set α) α :=
+{ coe := λ s, s.carrier,
+  coe_injective' := λ s t, by { cases s; cases t; simp } }
+
+def gen_set' (s : set α) : suboml_set α :=
+{ carrier := gen_set s,
+  top := gen_set_top_mem s,
+  bot := gen_set_bot_mem s,
+  sup := @gen_set_sup_mem _ _ s,
+  inf := @gen_set_inf_mem _ _ s,
+  compl := @gen_set_compl_mem _ _ s }
+
+@[simp] lemma suboml_set_coe_set (s : suboml_set α) : (↑s : set α) = s.carrier := rfl
+
+@[reducible] def suboml (s : suboml_set α) := subtype s.carrier
+
+namespace suboml_set
+variables {s : suboml_set α}
+
+instance : lattice (suboml s) := subtype.lattice s.sup s.inf
+
+lemma le_iff_coe_le {a b : suboml s} : a ≤ b ↔ (↑a : α) ≤ b := by refl
+
+lemma eq_iff_coe_eq {a b : suboml s} : a = b ↔ (↑a : α) = b :=
+by simp[le_antisymm_iff]
+
+@[simp] lemma mk_le_iff_le {a b : α} {ha} {hb} : (⟨a, ha⟩ : suboml s) ≤ ⟨b, hb⟩ ↔ a ≤ b := by refl
+
+@[simp] lemma mk_eq_iff_eq {a b : α} {ha} {hb} : (⟨a, ha⟩ : suboml s) = ⟨b, hb⟩ ↔ a = b :=
+by simp[le_antisymm_iff]
+
+@[simp] lemma coe_sup {a b : suboml s} : ((a ⊔ b : suboml s) : α) = ↑a ⊔ ↑b := by refl
+
+@[simp] lemma sup_coe {a b} {ha} {hb}: (⟨a, ha⟩ : suboml s) ⊔ ⟨b, hb⟩ = ⟨a ⊔ b, s.sup ha hb⟩ := by refl
+
+@[simp] lemma coe_inf {a b : suboml s} : ((a ⊓ b : suboml s) : α) = ↑a ⊓ ↑b := by refl
+
+@[simp] lemma inf_coe {a b} {ha} {hb}: (⟨a, ha⟩ : suboml s) ⊓ ⟨b, hb⟩ = ⟨a ⊓ b, s.inf ha hb⟩ := by refl
+
+instance : bounded_order (suboml s) :=
+{ top := ⟨⊤, s.top⟩,
+  le_top := λ a, le_iff_coe_le.mpr (by simp),
+  bot := ⟨⊥, s.bot⟩,
+  bot_le := λ a, le_iff_coe_le.mpr (by simp) }
+
+@[simp] lemma coe_top : ((⊤ : suboml s) : α) = ⊤ := by refl
+
+@[simp] lemma mk_top {h}: (⟨⊤, h⟩ : suboml s) = ⊤ := by refl
+
+@[simp] lemma mk_bot {h}: (⟨⊥, h⟩ : suboml s) = ⊥ := by refl
+
+@[simp] lemma coe_bot : ((⊥ : suboml s) : α) = ⊥ := by refl
+
+instance : has_orthocompl (suboml s) := ⟨λ ⟨a, h⟩, ⟨a′, s.compl h⟩⟩
+
+@[simp] lemma mk_compl (a : α) (h) :
+  (⟨a, h⟩ : suboml s)′ = ⟨a′, s.compl h⟩ := rfl
+
+instance : ortholattice (suboml s) :=
+{ double_compl := λ ⟨a, h⟩, by simp,
+  contraposition := λ ⟨a, ha⟩ ⟨b, hb⟩, by simp; refine contraposition a b,
+  sup_compl := λ ⟨a, ha⟩ ⟨b, hb⟩, by simp[sup_compl],
+  inf_compl_le_bot := λ ⟨a, h⟩, by simp,
+  top_le_sup_compl := λ ⟨a, h⟩, by simp }
+
+instance : orthomodular_lattice (suboml s) :=
+⟨λ ⟨a, h⟩ ⟨b, h⟩, by { simp, exact orthomodularity a b }⟩
+
+def distrib_lattice_of_commutes (h : commutes_set (↑s : set α)) :
+  distrib_lattice (suboml s) :=
+{ le_sup_inf := λ ⟨a, ha⟩ ⟨b, hb⟩ ⟨c, hc⟩, by simp [Foulis_Holland₃ (h a ha b hb) (h a ha c hc)],
+  ..orthomodular_lattice.suboml.lattice }
+
+def boolean_algebra_of_commutes (h : commutes_set (↑s : set α)) :
+  boolean_algebra (suboml s) :=
+boolean_algebra.of_core
+{ compl := λ a, a′,
+  inf_compl_le_bot := λ ⟨a, h⟩, by simp,
+  top_le_sup_compl := λ ⟨a, h⟩, by simp,
+  ..distrib_lattice_of_commutes h,
+  ..orthomodular_lattice.suboml.bounded_order }
+
+def boolean_algebra_of_commutes_gen {s : set α} (h : commutes_set (s : set α)) :
+  boolean_algebra (suboml $ gen_set' s) :=
+boolean_algebra_of_commutes (by { simp[gen_set'], refine commutes_set_gen_set h })
+
+end suboml_set
 
 end orthomodular_lattice
 
