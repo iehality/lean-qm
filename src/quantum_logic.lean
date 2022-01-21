@@ -536,11 +536,28 @@ boolean_algebra.of_core
   ..distrib_lattice_of_commutes h,
   ..orthomodular_lattice.suboml.bounded_order }
 
-def boolean_algebra_of_commutes_gen {s : set α} (h : commutes_set (s : set α)) :
+instance boolean_algebra_of_commutes_gen {s : set α} (h : commutes_set s) :
   boolean_algebra (suboml $ gen_set' s) :=
 boolean_algebra_of_commutes (by { simp[gen_set'], refine commutes_set_gen_set h })
 
 end suboml_set
+
+def commutability (a b : α) : α := a ⊓ b ⊔ a′ ⊓ b ⊔ a ⊓ b′ ⊔ a′ ⊓ b′
+
+infix ` ⫫ `:60 := commutability
+
+lemma commutes_iff_commutability_eq_top (a b : α) :
+  a ⫰ b ↔ a ⫫ b = ⊤ :=
+⟨λ h, by { 
+  calc a ⊓ b ⊔ a′ ⊓ b ⊔ a ⊓ b′ ⊔ a′ ⊓ b′ = (a ⊓ b ⊔ a′ ⊓ b) ⊔ (a ⊓ b′ ⊔ a′ ⊓ b′) : by simp[sup_assoc]
+                                     ... = (b ⊓ a ⊔ b ⊓ a′) ⊔ (b′ ⊓ a ⊔ b′ ⊓ a′) : by simp[inf_comm]
+                                     ... = (b ⊓ (a ⊔ a′)) ⊔ (b′ ⊓ (a ⊔ a′))      : by simp[h.symm.eql, h.symm.compll.eql]
+                                     ... = ⊤                                     : by simp
+ }, by {
+  simp[(⫫)], intros h,
+  have : a ⊔ b′ ≤ (a ⊓ b ⊔ a′ ⊓ b) ⊔ (a ⊓ b′ ⊔ a′ ⊓ b′),
+  { simp[←sup_assoc, h] },
+ }⟩
 
 end orthomodular_lattice
 

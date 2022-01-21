@@ -223,6 +223,9 @@ instance : orthomodular_lattice (cl_submodule 𝕜 E) := ortholattice.oml_of_ort
     simp[y_in_K]
   end)
 
+
+
+
 end cl_submodule
 
 end inner_product_space
