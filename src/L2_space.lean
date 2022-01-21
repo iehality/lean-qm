@@ -1,15 +1,34 @@
 import hilbert_space
 import data.equiv.ring
 import algebra.big_operators.ring
-import measure_theory.function.l2_space
+import analysis.normed_space.lp_space
+import analysis.inner_product_space.l2_space
+
+universes u v
 
 noncomputable theory
+open_locale nnreal ennreal big_operators
 
-notation `L²[`:25 E `, ` μ `]` := measure_theory.Lp E 2 μ
+variables
+  {𝕜 : Type*} [is_R_or_C 𝕜] 
+  {ι : Type*} {G : ι → Type*}
+  [Π (i : ι), normed_group (G i)]
+  [Π (i : ι), normed_space 𝕜 (G i)]
+  [∀ (a : ι), complete_space (G a)]
+  [Π (i : ι), inner_product_space 𝕜 (G i)]
 
-noncomputable instance {α : Type*} {E : Type*} {𝕜 : Type*} [is_R_or_C 𝕜] [measurable_space α]
-  {μ : measure_theory.measure α} [measurable_space E] [inner_product_space 𝕜 E] [borel_space E] [complete_space E]
-  [topological_space.second_countable_topology E] [measurable_space 𝕜] [borel_space 𝕜] :
-  hilbert_space 𝕜 L²[E, μ] :=
-{ inner := measure_theory.L2.inner_product_space,
-  complete := @measure_theory.Lp.complete_space _ _ _ 2 _ _ _ _ _ _ fact_one_le_two_ennreal }
+notation `ℓ² ` G := lp G 2
+
+namespace l2_space
+
+instance : normed_group (ℓ² G) := have _ := fact_one_le_two_ennreal, by exactI lp.normed_group
+
+instance : normed_space 𝕜 (ℓ² G) := have _ := fact_one_le_two_ennreal, by exactI lp.normed_space 
+
+instance : complete_space (ℓ² G) := have _ := fact_one_le_two_ennreal, by exactI lp.complete_space
+
+
+
+
+
+end l2_space
