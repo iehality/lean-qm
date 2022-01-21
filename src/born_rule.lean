@@ -30,8 +30,7 @@ def density (ψ : E) (A : hermitian 𝕜 E) (k : 𝕜) : ℝ := ∥Projection �
 def expectation (ψ : E) (A : hermitian 𝕜 E): ℝ := re ⟪ψ, A ψ⟫
 
 -- ゆらぎ
-def fluctuation (ψ : E) (A : hermitian 𝕜 E) : ℝ :=
-let d := A - expectation ψ A • 1 in re ⟪ψ, (d^2) ψ⟫
+def fluctuation (ψ : E) (A : hermitian 𝕜 E) : ℝ := re ⟪ψ, ((A - expectation ψ A • 1)^2) ψ⟫
 
 notation `d²[` ψ `]` := fluctuation ψ
 
@@ -81,17 +80,16 @@ calc d²[ψ] A = re ⟪ψ, d (d ψ)⟫ : by simp only [d, fluctuation, hermitian
 end
 
 theorem fluctuation_lower_bound (A B : hermitian 𝕜 E) (ψ : E) :
-  (re ⟪ψ, -𝑖⟦A, B⟧ ψ⟫)^2 / 4 ≤ d²[ψ] A * d²[ψ] B :=
+  (re ⟪ψ, -𝑖⁅A, B⁆ ψ⟫)^2 / 4 ≤ d²[ψ] A * d²[ψ] B :=
 let dA : hermitian 𝕜 E := diff A ψ,
     dB : hermitian 𝕜 E := diff B ψ in
 have div_eq : ∀ z : 𝕜, re (z / 2) = re z / 2,
 { intros z, have := @div_re_of_real _ _ z 2, simp at this, exact this },
-have comt_eq: -𝑖⟦dA, dB⟧ = -𝑖⟦A, B⟧,
+have comt_eq: -𝑖⁅dA, dB⁆ = -𝑖⁅A, B⁆,
 { refine hermitian.ext' _,
-  simp only [communitator_hermitian_eq, dA, dB, diff, hermitian.sub_coe, hermitian.smul_coe, hermitian.one_coe,
-  communitator.sub_left, communitator.sub_right, communitator.smul_left, communitator.smul_right,
-  communitator.one_left, communitator.one_right, smul_zero, sub_zero]  },
-calc (re ⟪ψ, -𝑖⟦A, B⟧ ψ⟫)^2 / 4 = (re (⟪ψ, -𝑖⟦dA, dB⟧ ψ⟫ / 2))^2                      : by rw comt_eq; simp only [div_eq, div_pow]; ring
+  simp [communitator_hermitian_eq, dA, dB, diff,
+    hermitian.sub_coe, hermitian.smul_coe, hermitian.one_coe],   },
+calc (re ⟪ψ, -𝑖⁅A, B⁆ ψ⟫)^2 / 4 = (re (⟪ψ, -𝑖⁅dA, dB⁆ ψ⟫ / 2))^2                      : by rw comt_eq; simp only [div_eq, div_pow]; ring
                             ... = (re (𝑖 * (⟪ψ, dB (dA ψ)⟫ - ⟪ψ, dA (dB ψ)⟫) / 2))^2  : by simp only [communitator_hermitian.apply, sub_apply, smul_apply, mul_apply,
                                                                                            hermitian.apply, inner_sub_right, mul_sub, inner_smul_right]
                             ... = (re (𝑖 * (⋆⟪ψ, dA (dB ψ)⟫ - ⟪ψ, dA (dB ψ)⟫) / 2))^2 : by simp only [inner_conj_sym, hermitian.inner_comm]

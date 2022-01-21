@@ -8,6 +8,8 @@ import order.filter.partial
 import algebra.support
 import linear_algebra.eigenspace
 import topology.algebra.module.basic
+import algebra.lie.basic
+import data.bracket
 
 universes u v
 
@@ -215,56 +217,28 @@ def Projection (A : operator 𝕜 E) (k : 𝕜) : operator 𝕜 E := (subtype_va
 
 lemma Projection_eq_projection_fn (A : operator 𝕜 E) (k : 𝕜) (ψ : E) : Projection A k ψ = orthogonal_projection_fn (eigenspace A k) ψ := rfl
 
-
 def communitator (A B : operator 𝕜 E) : operator 𝕜 E := A * B - B * A
 
-notation `⟦` A `, ` B `⟧` := communitator A B
+instance : has_bracket (operator 𝕜 E) (operator 𝕜 E) := ⟨communitator⟩
+
+lemma bracket_def (A B : operator 𝕜 E) : ⁅A, B⁆ = A * B - B * A := rfl
 
 def commute (A B : operator 𝕜 E) : Prop := A * B = B * A
 
-namespace communitator
+instance : lie_ring (operator 𝕜 E) :=
+{ add_lie := λ A B C, by simp only [bracket_def, mul_add, add_mul, add_sub_comm],
+  lie_add := λ A B C, by simp only [bracket_def, mul_add, add_mul, add_sub_comm],
+  lie_self := λ A, by simp only [bracket_def, sub_self],
+  leibniz_lie := λ A B C, by { simp only [bracket_def, sub_mul, mul_sub, ←mul_assoc], abel } }
 
-lemma add_left (A B C : operator 𝕜 E) : ⟦A + B, C⟧ = ⟦A, C⟧ + ⟦B, C⟧ :=
-by simp only [communitator, mul_add, add_mul, add_sub_comm]
+instance : lie_algebra 𝕜 (operator 𝕜 E) :=
+{ lie_smul := λ k A B, by simp [bracket_def, smul_sub, smul_mul_assoc, mul_smul_comm] }
 
-lemma add_right (A B C : operator 𝕜 E) : ⟦A, B + C⟧ = ⟦A, B⟧ + ⟦A, C⟧ :=
-by simp only [communitator, mul_add, add_mul, add_sub_comm]
+@[simp] lemma communitator.one_left (A : operator 𝕜 E) : ⁅(1 : operator 𝕜 E), A⁆ = 0 :=
+by simp [bracket_def, mul_one, one_mul, sub_self]
 
-lemma neg_left (A B : operator 𝕜 E) : ⟦-A, B⟧ = -⟦A, B⟧ :=
-by simp [communitator]
-
-lemma neg_right (A B : operator 𝕜 E) : ⟦A, -B⟧ = -⟦A, B⟧ :=
-by simp [communitator]
-
-lemma sub_left (A B C : operator 𝕜 E) : ⟦A - B, C⟧ = ⟦A, C⟧ - ⟦B, C⟧ :=
-by simp [sub_eq_add_neg, add_left, neg_left]
-
-lemma sub_right (A B C : operator 𝕜 E) : ⟦A, B - C⟧ = ⟦A, B⟧ - ⟦A, C⟧ :=
-by simp [sub_eq_add_neg, add_right, neg_right]
-
-lemma smul_left (A B : operator 𝕜 E) (k : 𝕜) : ⟦k • A, B⟧ = k • ⟦A, B⟧ :=
-by simp only [communitator, smul_sub, smul_mul_assoc, mul_smul_comm]
-
-lemma smul_right (A B : operator 𝕜 E) (k : 𝕜) : ⟦A, k • B⟧ = k • ⟦A, B⟧ :=
-by simp only [communitator, smul_sub, smul_mul_assoc, mul_smul_comm]
-
-@[simp] lemma alternativity (A : operator 𝕜 E) : ⟦A, A⟧ = 0 :=
-by simp only [communitator, sub_self]
-
-lemma anticomm (A B : operator 𝕜 E) : ⟦A, B⟧ = -⟦B, A⟧ :=
-by simp only [communitator, neg_sub]
-
-@[simp] lemma one_left (A : operator 𝕜 E) : ⟦1, A⟧ = 0 :=
-by simp only [communitator, mul_one, one_mul, sub_self]
-
-@[simp] lemma one_right (A : operator 𝕜 E) : ⟦A, 1⟧ = 0 :=
-by simp only [communitator, mul_one, one_mul, sub_self]
-
-lemma jacobi_identity (A B C : operator 𝕜 E) : 
-  ⟦A, ⟦B, C⟧⟧ + ⟦B, ⟦C, A⟧⟧ + ⟦C, ⟦A, B⟧⟧ = 0 :=
-by { sorry }
-
-end communitator
+@[simp] lemma communitator.one_right (A : operator 𝕜 E) : ⁅A, (1 : operator 𝕜 E)⁆ = 0 :=
+by simp [bracket_def, mul_one, one_mul, sub_self]
 
 namespace hermitian
 
@@ -337,19 +311,20 @@ lemma map_smul (A : hermitian 𝕜 E) (x : E) (k : 𝕜) : A (k • x) = k • A
 end hermitian
 
 def communitator_hermitian (A B : hermitian 𝕜 E) : hermitian 𝕜 E :=
-⟨-𝑖 • ⟦A, B⟧, is_hermitian_iff.mpr (by simp [communitator, adjoint_smul, adjoint_sub, adjoint_mul, smul_sub])⟩
+⟨-𝑖 • ⁅(A : operator 𝕜 E), B⁆, is_hermitian_iff.mpr (by simp [bracket_def, adjoint_smul, adjoint_sub, adjoint_mul, smul_sub])⟩
 
-notation `-𝑖⟦` A `, ` B `⟧` := communitator_hermitian A B
+notation `-𝑖⁅` A `, ` B `⁆` := communitator_hermitian A B
 
-lemma communitator_hermitian_eq (A B : hermitian 𝕜 E) : (-𝑖⟦A, B⟧ : operator 𝕜 E) = -𝑖 • ⟦A, B⟧ := rfl
+lemma communitator_hermitian_eq (A B : hermitian 𝕜 E) :
+(-𝑖⁅A, B⁆ : operator 𝕜 E) = -𝑖 • ⁅(A : operator 𝕜 E), B⁆ := rfl
 
 lemma communitator_hermitian.apply (A B : hermitian 𝕜 E) (x : E) :
-  -𝑖⟦A, B⟧ x = 𝑖 • (B * A : operator 𝕜 E) x - 𝑖 • (A * B : operator 𝕜 E) x  :=
-by { simp only [←hermitian.apply, communitator_hermitian_eq, communitator, smul_apply, sub_apply, smul_sub],
+  -𝑖⁅A, B⁆ x = 𝑖 • (B * A : operator 𝕜 E) x - 𝑖 • (A * B : operator 𝕜 E) x  :=
+by { simp only [←hermitian.apply, communitator_hermitian_eq, bracket_def, smul_apply, sub_apply, smul_sub],
      simp only [neg_smul, sub_neg_eq_add, neg_add_eq_sub] }
 
 lemma communitator_hermitian.apply' (A B : hermitian 𝕜 E) (x : E) :
-  -𝑖⟦A, B⟧ x = -𝑖 • (⟦↑A, ↑B⟧ : operator 𝕜 E) x := rfl
+  -𝑖⁅A, B⁆ x = -𝑖 • (⁅(A : operator 𝕜 E), ↑B⁆ : operator 𝕜 E) x := rfl
 
 section
 variables {ι : Type*} (𝕜)
